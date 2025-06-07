@@ -39,12 +39,4 @@ exports.signupSchema = Joi.object({
       'string.pattern.base': 'Password must be at least 8 characters long and include uppercase, lowercase letters and a number',
       'any.required': 'Password is required',
     }),
-
-  aadharNumber: Joi.string()
-    .pattern(/^\d{12}$/)
-    .required()
-    .messages({
-      'string.pattern.base': 'Aadhaar must be exactly 12 digits',
-      'any.required': 'Aadhaar is required',
-    }),
 });

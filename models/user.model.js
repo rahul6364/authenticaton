@@ -16,13 +16,6 @@ const userSchema=mongoose.Schema({
         trim:true,
         select:false
     },
-    aadharNumber:{
-        type:String,
-        required:[true,"aadhar is required"],
-        trim:true,
-        unique:[true,"enter the proper aadhar numbe"],
-        minLength:[12,"must have 12 digits"]
-    },
     verified:{
         type:Boolean,
         default:false
@@ -48,6 +41,6 @@ const userSchema=mongoose.Schema({
     timestamps:true
 })
 
-const userModel=mongoose.model('User',userSchema)
+const userModel=mongoose.model('auth',userSchema)
 
 module.exports= userModel;
