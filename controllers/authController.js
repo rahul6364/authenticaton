@@ -1,7 +1,10 @@
 const { signupSchema } = require('../middleware/validator.js');
 const userModel = require('../models/user.model.js');
-const { doHash, hashValidation } = require('../utils/hashing.js');
+const { doHash, hashValidation, hmacProcess } = require('../utils/hashing.js');
 const jwt = require("jsonwebtoken")
+const transport = require("../middleware/sendMail.js")
+
+
 exports.signup = async (req, res) => {
     const { email, password } = req.body;
     try {
@@ -110,15 +113,91 @@ exports.signin = async (req, res) => {
     }
 }
 
-exports.signout=async(req,res)=>{
+exports.signout = async (req, res) => {
     res.clearCookie('Authorization')
-    .status(200)
-    .json({
-        success:true,
-        message:"loggedout successfully"
-    })
+        .status(200)
+        .json({
+            success: true,
+            message: "loggedout successfully"
+        })
 }
 
 
 
+exports.sendVerficationCode = async (req, res) => {
+    const { email } = req.body;
+    try {
+        const existingUser = await userModel.findOne({ email })
 
+        if (existingUser.verified) {
+            return res.status(400).json({
+                success: false,
+                message: "you are already verified"
+            })
+        }
+
+        const codeValue = Math.floor(Math.random() * 1000000).toString();
+
+        let info = await transport.sendMail({
+            from: process.env.NODE_CODE_SENDING_EMAIL_ADDRESS,
+            to: existingUser.email,
+            subject: "verification code",
+            html: '<h1>' + codeValue + '</h1>'
+        })
+
+        if (info.accepted[0] === existingUser.email) {
+            const hashedCodeValue = hmacProcess(
+                codeValue,
+                process.env.HASHING_KEY)
+
+            existingUser.verificationCode = hashedCodeValue;
+            existingUser.verificationCodeValidation = Date.now() + 10 * 60 * 1000; // 10 minutes expiry
+            await existingUser.save();
+            return res.status(200).json({
+                success: true,
+                message: "code sent!"
+            })
+        }
+
+
+
+    } catch (error) {
+        console.log(error);
+
+    }
+}
+
+exports.verifyVerificationCode = async (req, res) => {
+    const { email, providedCode } = req.body;
+    try {
+        const { error, value } = acceptCodeSchema.validate({ email, providedCode });
+        if (error) {
+            return res.status(401).json({
+                success: false,
+                message: error.details[0].message
+            })
+        }
+
+        const existingUser = await userModel.findOne({ email }).select('+verificationCode+verificationCodeValidation')
+
+        if (!existingUser) {
+            return res
+                .status(401)
+                .json({
+                    success: false,
+                    message: "user doesnt found"
+                })
+        }
+
+        if(existingUser.verified){
+            return res.status(200).json({
+                success: true,
+                message: "code sent!"
+            })
+        }
+        
+    } catch (error) {
+        console.log(error);
+
+    }
+}

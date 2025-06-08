@@ -40,3 +40,13 @@ exports.signupSchema = Joi.object({
       'any.required': 'Password is required',
     }),
 });
+
+exports.acceptCodeSchema=Joi.object({
+  email: Joi.string()
+    .min(6)
+    .max(225)
+    .required()
+    .email({ tlds: { allow: ['com', 'in'] } }),
+
+  provideCode: Joi.number()
+})
