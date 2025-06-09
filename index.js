@@ -22,6 +22,7 @@ app.use(express.json())
 app.use("/api/auth",router);
 app.use(cors());
 app.use(helmet());
+app.use(cookieParser());
 
 
 

@@ -48,5 +48,22 @@ exports.acceptCodeSchema=Joi.object({
     .required()
     .email({ tlds: { allow: ['com', 'in'] } }),
 
-  provideCode: Joi.number()
+  providedCode: Joi.number()
+})
+
+exports.changePasswordSchema=Joi.object({
+  newPassword: Joi.string()
+    .required()
+    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/)
+    .messages({
+      'string.pattern.base': 'Password must be at least 8 characters long and include uppercase, lowercase letters and a number',
+      'any.required': 'Password is required',
+    }),
+    oldPassword:Joi.string()
+    .required()
+    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/)
+    .messages({
+      'string.pattern.base': 'Password must be at least 8 characters long and include uppercase, lowercase letters and a number',
+      'any.required': 'Password is required'
+       }),
 })

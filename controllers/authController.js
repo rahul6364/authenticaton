@@ -1,4 +1,4 @@
-const { signupSchema } = require('../middleware/validator.js');
+const { signupSchema, acceptCodeSchema,changePasswordSchema } = require('../middleware/validator.js');
 const userModel = require('../models/user.model.js');
 const { doHash, hashValidation, hmacProcess } = require('../utils/hashing.js');
 const jwt = require("jsonwebtoken")
@@ -91,7 +91,7 @@ exports.signin = async (req, res) => {
             userId: existingUser._id,
             email: existingUser.email,
             verified: existingUser.verified
-        }, process.env.TOKEN_SECRETE,
+        }, process.env.TOKEN_SECRET,
 
             {
                 expiresIn: '8h'
@@ -142,7 +142,7 @@ exports.sendVerficationCode = async (req, res) => {
             from: process.env.NODE_CODE_SENDING_EMAIL_ADDRESS,
             to: existingUser.email,
             subject: "verification code",
-            html: '<h1>' + codeValue + '</h1>'
+            html: '<h1>' + codeValue + '</h1>',
         })
 
         if (info.accepted[0] === existingUser.email) {
@@ -178,26 +178,128 @@ exports.verifyVerificationCode = async (req, res) => {
             })
         }
 
-        const existingUser = await userModel.findOne({ email }).select('+verificationCode+verificationCodeValidation')
+        const existingUser = await userModel.findOne({ email }).select('+verificationCode +verificationCodeValidation')
 
         if (!existingUser) {
             return res
                 .status(401)
                 .json({
                     success: false,
-                    message: "user doesnt found"
+                    message: "user doesn't found"
                 })
         }
 
-        if(existingUser.verified){
+        // console.log(existingUser);
+        // console.log(existingUser.verificationCode);
+        // console.log(existingUser.verificationCodeValidation);
+
+
+        if (existingUser.verified) {
             return res.status(200).json({
-                success: true,
-                message: "code sent!"
+                success: false,
+                message: "you are already verified!"
             })
         }
-        
+
+        if (!existingUser.verificationCode || !existingUser.verificationCodeValidation) {
+            return res.status(400).json({
+                success: false,
+                message: "something went wrong in verification code"
+            })
+        }
+
+        if (Date.now() > existingUser.verificationCodeValidation) {
+            return res.status(200).json({
+                success: false,
+                message: "code is expired"
+            })
+        }
+
+        const hashedCodeValue = hmacProcess(providedCode.toString(), process.env.HASHING_KEY)
+
+        if (hashedCodeValue === existingUser.verificationCode) {
+            existingUser.verified = true;
+            existingUser.verificationCode = undefined
+            existingUser.verificationCodeValidation = undefined
+
+            await existingUser.save()
+            return res
+                .status(200)
+                .json({
+                    success: true,
+                    message: "your account has been verified"
+                })
+        }
+        return res
+            .status(400)
+            .json({
+                success: false,
+                message: "unexpected error "
+            })
+
+
+
     } catch (error) {
         console.log(error);
 
     }
 }
+
+
+exports.changePassword = async (req, res) => {
+    const { userId, verified } = req.user;  // make sure req.user is set
+
+    const { oldPassword, newPassword } = req.body
+
+    try {
+  
+        const {error,value}=changePasswordSchema.validate({oldPassword,newPassword})
+        if (error) {
+            return res.status(401).json({
+                success: false,
+                message: error.details[0].message
+            })
+        }
+        // if (!verified) {
+        //     return res.status(404).json({
+        //         success: false,
+        //         message: "user is not verified"
+        //     })
+        // }
+        const existingUser = await userModel.findOne({_id:userId }).select('+password')
+        if (!existingUser) {
+            return res.status(401).json({
+                success: false,
+                message: "user not found"
+            })
+        }
+
+        const result = await hashValidation(oldPassword, existingUser.password)
+       if (!result) {
+            return res.status(401).json({
+                success: false,
+                message: "incorrect password"
+            })
+        }
+        const hashedPassword=await doHash(newPassword,12)
+
+        existingUser.password=hashedPassword;
+        await existingUser.save();
+
+         return res
+            .status(200)
+            .json({
+                success: true,
+                message: "Password is changed"
+            })
+        
+
+
+    } catch (error) {
+
+        console.log(error);
+
+    }
+}
+
+
