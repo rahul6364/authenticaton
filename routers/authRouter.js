@@ -9,5 +9,8 @@ router.post('/signout',identification.identifier,authController.signout)
 router.patch('/sendVerficationCode',identification.identifier,authController.sendVerficationCode)
 router.patch('/verifysendVerficationCode',identification.identifier,authController.verifyVerificationCode)
 router.patch('/changePassword',identification.identifier,authController.changePassword)
+router.patch('/sendForgotPasswordCode',authController.sendForgotPasswordCode)
+router.patch('/verifyForgotPasswordCode',authController.verifyForgotPasswordCode)
 
 module.exports=router;
+

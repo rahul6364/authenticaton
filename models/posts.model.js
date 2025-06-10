@@ -14,10 +14,10 @@ const postSchema=mongoose.Schema({
     },
     userId:{
         type:mongoose.Schema.Types.ObjectId,
-        ref:'User'
+        ref:'auth'
     }
 },{
-    Timestamp:true
+    timestamp:true
 })
 
 module.exports=mongoose.model('Post',postSchema);
